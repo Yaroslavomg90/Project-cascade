@@ -1,28 +1,31 @@
-# Project Cascade
+## Project Cascade
 
-Modern RTS inspired by Dune II, Command & Conquer and StarCraft.
+A modern real-time strategy game inspired by Dune II, Command & Conquer and StarCraft.
+
+## Vision
+
+Project Cascade is a classic base-building RTS featuring:
+
+- Three unique factions
+- Large-scale battles
+- Economy and resource gathering
+- Fog of War
+- Ground and air combat
+- Modern modular engine
+- Campaign and skirmish modes
 
 ## Current Status
 
-Early Alpha
+🚧 Early Alpha
 
-## Features
+## Technologies
 
-- Three factions
-- Base building
-- Resource gathering
-- Infantry
-- Vehicles
-- Aircraft
-- Fog of war
-- Modern RTS engine
-
-## Technology
-
-- JavaScript
+- JavaScript (ES Modules)
 - HTML5 Canvas
-- ES Modules
+- Git
+- GitHub
+- VS Code
 
-## Author
+## Development
 
-Yaroslav
+The project is under active development.
