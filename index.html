@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>PROJECT CASCADE — RTS</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <div id="startOverlay">
+    <h1>PROJECT CASCADE</h1>
+    <div class="sub">ВЫБЕРИТЕ ФРАКЦИЮ</div>
+    <div id="factionRow"></div>
+    <div class="sub" style="margin-top:6px;">ЛКМ — выбор/рамка · ПКМ — движение/атака/добыча · 1-9 группы · Ctrl+1-9 создать группу · WASD/край экрана — камера</div>
+  </div>
+
+  <div id="endOverlay" class="hidden">
+    <h1 id="endTitle">ПОБЕДА</h1>
+    <div id="endSub" class="sub"></div>
+    <button onclick="location.reload()">ИГРАТЬ СНОВА</button>
+  </div>
+
+  <div id="topbar">
+    <div class="fLogo" id="fLogo">◈</div>
+    <div class="fName" id="fNameTop">—</div>
+    <div class="stat"><span class="lbl">КРИСТАЛЛЫ</span><span class="val" id="statCrystal">0</span></div>
+    <div class="stat"><span class="lbl">ПОПУЛЯЦИЯ</span><span class="val" id="statPop">0/0</span></div>
+    <div class="stat"><span class="lbl">ВРЕМЯ</span><span class="val" id="statTime">00:00</span></div>
+    <div class="spacer"></div>
+    <div class="stat"><span class="lbl">ВРАГ</span><span class="val" id="statEnemy" style="color:#e07f7f;">?</span></div>
+    <button id="menuBtn" onclick="location.reload()">В МЕНЮ</button>
+  </div>
+
+  <div id="main">
+    <div id="viewportWrap">
+      <canvas id="gameCanvas"></canvas>
+      <div id="placeHint" class="hidden">Разместите здание на сетке (ЛКМ — подтвердить, ПКМ — отмена)</div>
+      <div id="tipbar">Готово к бою.</div>
+    </div>
+    <div id="sidebar">
+      <div id="minimapWrap"><canvas id="minimap"></canvas></div>
+      <div id="selPanel"><div class="empty">Ничего не выбрано</div></div>
+      <div id="tabRow">
+        <div class="tabBtn active" id="tabBuild" onclick="setTab('build')">ЗДАНИЯ</div>
+        <div class="tabBtn" id="tabUnit" onclick="setTab('unit')">ЮНИТЫ</div>
+      </div>
+      <div id="buildScroll"></div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
