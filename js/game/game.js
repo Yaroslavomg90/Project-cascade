@@ -1,7 +1,26 @@
-import {Engine} from "../engine/engine.js";
-export class Game{
- constructor(){this.engine=new Engine();}
- start(){this.engine.start(this.update.bind(this),this.render.bind(this));}
- update(dt){/* TODO: migrate legacy update */ }
- render(alpha){/* TODO: migrate renderer */ }
+import { Engine } from "../engine/engine.js";
+import { renderLegacyGame, updateLegacyGame } from "./legacy-game.js";
+
+export class Game {
+  constructor() {
+    this.engine = new Engine();
+    this.update = this.update.bind(this);
+    this.render = this.render.bind(this);
+  }
+
+  start() {
+    this.engine.start(this.update, this.render);
+  }
+
+  stop() {
+    this.engine.stop();
+  }
+
+  update(deltaTime) {
+    updateLegacyGame(deltaTime);
+  }
+
+  render() {
+    renderLegacyGame();
+  }
 }

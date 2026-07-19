@@ -1,4 +1,7 @@
 
+import { Renderer } from "../renderer/renderer.js";
+import { UnitSpriteAtlas } from "../renderer/unit-sprite-atlas.js";
+
 /* =========================================================================
    PROJECT CASCADE — mini RTS
    ========================================================================= */
@@ -53,6 +56,7 @@ const BUILDING_ORDER=['barracks','factory','airfield','turret'];
 
 /* ---------------- GAME STATE ---------------- */
 let playerFaction=null, aiFactionKey=null;
+let gameStarted=false;
 let resources=[0,0];      // [player, ai]
 let popCap=[10,10], popUsed=[0,0];
 let gameTime=0;
@@ -72,7 +76,9 @@ let rallySettingFor=null;
 const canvas=document.getElementById('gameCanvas');
 const ctx=canvas.getContext('2d');
 const mmCanvas=document.getElementById('minimap');
-const mmCtx=mmCanvas.getContext('2d');
+const renderer=new Renderer(canvas,mmCanvas);
+const unitSpriteAtlas=new UnitSpriteAtlas();
+unitSpriteAtlas.load();
 
 function resizeCanvas(){
   const wrap=document.getElementById('viewportWrap');
@@ -117,6 +123,16 @@ function statRow(label,v,color){
   return `<div><span>${label}</span><span>${fill}</span></div>`;
 }
 buildFactionCards();
+document.getElementById('tabBuild').addEventListener('click',()=>setTab('build'));
+document.getElementById('tabUnit').addEventListener('click',()=>setTab('unit'));
+document.getElementById('selPanel').addEventListener('click',event=>{
+  const button=event.target.closest('[data-action]');
+  if(!button) return;
+  if(button.dataset.action==='stop') stopSelected();
+  if(button.dataset.action==='cancel-queue'){
+    cancelQueue(Number(button.dataset.buildingId),Number(button.dataset.queueIndex));
+  }
+});
 
 /* =========================================================================
    GAME START
@@ -131,7 +147,7 @@ function startGame(key){
   document.getElementById('statEnemy').textContent=FACTIONS[aiFactionKey].name;
   resizeCanvas();
   setupWorld();
-  requestAnimationFrame(loop);
+  gameStarted=true;
 }
 function applyTheme(f){
   const r=document.documentElement.style;
@@ -299,7 +315,7 @@ function stopSelected(){
 }
 function actionRow(ownerIsPlayer){
   if(!ownerIsPlayer) return '';
-  return `<div class="queueRow"><div class="queueItem" onclick="stopSelected()">⏹ Стоп</div></div>`;
+  return `<div class="queueRow"><button class="queueItem" type="button" data-action="stop">⏹ Стоп</button></div>`;
 }
 function updateSelPanel(){
   const panel=document.getElementById('selPanel');
@@ -328,7 +344,7 @@ function updateSelPanel(){
     const pct=Math.max(0,e.hp/e.maxHp*100);
     let queueHtml='';
     if(e.owner===0 && def.produces.length){
-      queueHtml='<div class="queueRow">'+(e.queue.length?e.queue.map((q,i)=>`<div class="queueItem" onclick="cancelQueue(${e.id},${i})">${UNIT_DEFS[q.type].name} ${(q.t/q.total*100)|0}% ✕</div>`).join(''):'<span class="empty">Очередь пуста</span>')+'</div>';
+      queueHtml='<div class="queueRow">'+(e.queue.length?e.queue.map((q,i)=>`<button class="queueItem" type="button" data-action="cancel-queue" data-building-id="${e.id}" data-queue-index="${i}">${UNIT_DEFS[q.type].name} ${(q.t/q.total*100)|0}% ✕</button>`).join(''):'<span class="empty">Очередь пуста</span>')+'</div>';
     }
     panel.innerHTML=`<div class="selTitle">${def.name}${e.constructing?' (стройка)':''}<span>${e.owner===0?'Вы':'Враг'}</span></div>
       <div class="hpBarOuter"><div class="hpBarInner" style="width:${pct}%;background:${hpColor(pct)}"></div></div>
@@ -453,15 +469,8 @@ let shake=0;
 /* =========================================================================
    MAIN UPDATE LOOP
    ========================================================================= */
-let lastTs=performance.now();
-function loop(ts){
-  let dt=(ts-lastTs)/1000; lastTs=ts; dt=Math.min(dt,0.05);
-  if(!gameOver){ update(dt); }
-  render();
-  requestAnimationFrame(loop);
-}
-
-function update(dt){
+export function updateLegacyGame(dt){
+  if(!gameStarted || gameOver) return;
   gameTime+=dt;
   handleCameraKeys(dt);
   updateProduction(dt);
@@ -745,6 +754,8 @@ function roundRect(g,x,y,w,h,r){
 function seededRand(i){ const x=Math.sin(i*999.7)*43758.5453; return x-Math.floor(x); }
 
 function getUnitSprite(role,facKey){
+  const atlasSprite=unitSpriteAtlas.getSprite(facKey,role);
+  if(atlasSprite) return atlasSprite;
   return getCachedSprite('u_'+role+'_'+facKey,128,128,(g,w,h)=>drawUnitArt(g,w,h,role,FACTIONS[facKey]));
 }
 function drawUnitArt(g,W,H,role,fac){
@@ -943,23 +954,33 @@ function shapePath(ctx,shape,cx,cy,s){
   }
 }
 
-function render(){
-  ctx.save();
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  const sx=shake?rnd(-shake,shake):0, sy=shake?rnd(-shake,shake):0;
-  ctx.translate(-cam.x+sx,-cam.y+sy);
-
-  drawTerrain();
-  nodes.forEach(drawNode);
-  buildings.slice().sort((a,b)=>a.y-b.y).forEach(drawBuilding);
-  units.slice().sort((a,b)=>a.y-b.y).forEach(drawUnit);
-  drawParticles();
-  drawFog();
-  drawPlacementGhost();
-  ctx.restore();
-
-  drawDragBox();
-  drawMinimap();
+export function renderLegacyGame(){
+  if(!gameStarted) return;
+  renderer.render({
+    camera:cam,
+    shake,
+    random:rnd,
+    nodes,
+    buildings,
+    units,
+    columns:COLS,
+    rows:ROWS,
+    tileSize:TILE,
+    worldWidth:WORLD_W,
+    worldHeight:WORLD_H,
+    playerFaction:FACTIONS[playerFaction],
+    isCellVisited:(column,row)=>visited[fIdx(column,row)]===1,
+    isTileVisited:tileVisited,
+    isTileVisible:tileVisible,
+    drawTerrain,
+    drawNode,
+    drawBuilding,
+    drawUnit,
+    drawParticles,
+    drawFog,
+    drawPlacementGhost,
+    drawDragBox,
+  });
 }
 
 function drawTerrain(){
@@ -1114,28 +1135,6 @@ function drawDragBox(){
   ctx.lineWidth=1; ctx.fillRect(x,y,w,h); ctx.strokeRect(x,y,w,h);
 }
 
-function drawMinimap(){
-  mmCtx.clearRect(0,0,mmCanvas.width,mmCanvas.height);
-  mmCtx.fillStyle='#04070a'; mmCtx.fillRect(0,0,mmCanvas.width,mmCanvas.height);
-  const sx=mmCanvas.width/WORLD_W, sy=mmCanvas.height/WORLD_H;
-  // fog
-  mmCtx.fillStyle='rgba(255,255,255,0.04)';
-  for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ if(visited[fIdx(c,r)]) mmCtx.fillRect(c*TILE*sx,r*TILE*sy,TILE*sx+1,TILE*sy+1); }
-  nodes.forEach(n=>{ if(!tileVisited(n.x,n.y))return; mmCtx.fillStyle='#3ea0c9'; mmCtx.fillRect(n.x*sx-1,n.y*sy-1,3,3); });
-  buildings.forEach(b=>{
-    if(b.owner===1 && !tileVisited(b.x,b.y)) return;
-    mmCtx.fillStyle=b.owner===0?FACTIONS[playerFaction].accent:'#e05a5a';
-    mmCtx.fillRect(b.x*sx,b.y*sy,Math.max(2,b.w*TILE*sx),Math.max(2,b.h*TILE*sy));
-  });
-  units.forEach(u=>{
-    if(u.owner===1 && !tileVisible(u.x,u.y)) return;
-    mmCtx.fillStyle=u.owner===0?FACTIONS[playerFaction].glow:'#ff8b7a';
-    mmCtx.fillRect(u.x*sx-1,u.y*sy-1,2,2);
-  });
-  mmCtx.strokeStyle='#fff'; mmCtx.lineWidth=1;
-  mmCtx.strokeRect(cam.x*sx,cam.y*sy,canvas.width*sx,canvas.height*sy);
-}
-
 /* =========================================================================
    TOPBAR
    ========================================================================= */
@@ -1268,4 +1267,3 @@ mmCanvas.addEventListener('mousedown',e=>{
   cam.x=clamp(mx-canvas.width/2,0,Math.max(0,WORLD_W-canvas.width));
   cam.y=clamp(my-canvas.height/2,0,Math.max(0,WORLD_H-canvas.height));
 });
-
